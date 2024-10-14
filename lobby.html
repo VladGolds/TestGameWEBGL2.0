@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+        import { getDatabase, ref, onValue, set, get, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAZqT98d7V8gpCeNma7Aos3u7ol5_wOug4",
@@ -19,86 +19,67 @@
             appId: "1:217470228668:web:30844724050d278a7358b9"
         };
 
+        // Инициализация Firebase
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
-        // Получаем код лобби из URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const lobbyCode = urlParams.get('lobbyCode');
-        const username = localStorage.getItem('username');
 
-        // Ссылка на лобби в Firebase
-        const lobbyRef = ref(database, 'lobbies/' + lobbyCode);
+        // Функция загрузки лобби и игроков
+        function loadLobby(lobbyId) {
+            const lobbyRef = ref(database, 'lobbies/' + lobbyId);
 
-        // Обновляем интерфейс, когда данные лобби меняются
-        onValue(lobbyRef, (snapshot) => {
-            if (snapshot.exists()) {
+            // Подписываемся на изменения данных о лобби
+            onValue(lobbyRef, (snapshot) => {
                 const lobbyData = snapshot.val();
-                document.getElementById('lobby-code').textContent = `Код лобби: ${lobbyCode}`;
-                document.getElementById('players').innerHTML = '';
+                const playerList = document.getElementById('player-list');
+                playerList.innerHTML = ''; // Очищаем список перед обновлением
 
-                // Отображаем игроков
-                Object.keys(lobbyData.players).forEach((player) => {
-                    const playerElement = document.createElement('div');
-                    playerElement.textContent = `${player} - ${lobbyData.players[player].ready ? 'Готов' : 'Не готов'}`;
-                    document.getElementById('players').appendChild(playerElement);
+                Object.keys(lobbyData.players).forEach(player => {
+                    const playerElement = document.createElement('li');
+                    playerElement.textContent = player + (player === lobbyData.host ? ' (Хост)' : '') +
+                        (lobbyData.players[player].ready ? ' - готов' : ' - не готов');
+                    playerList.appendChild(playerElement);
                 });
+            });
+        }
+
+        // Функция для изменения статуса готовности игрока
+        function toggleReadyStatus(lobbyId) {
+            const username = localStorage.getItem('username');
+            const playerRef = ref(database, `lobbies/${lobbyId}/players/${username}`);
+
+            get(playerRef).then((snapshot) => {
+                const isReady = snapshot.val().ready;
+
+                // Изменяем статус готовности
+                update(playerRef, {
+                    ready: !isReady
+                }).then(() => {
+                    console.log('Статус готовности обновлен.');
+                });
+            });
+        }
+
+        // Обработка нажатия на кнопку "Готов / Не готов"
+        document.addEventListener('DOMContentLoaded', () => {
+            const lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
+            if (lobbyId) {
+                loadLobby(lobbyId); // Загружаем данные о лобби при загрузке страницы
+
+                // Обработка смены статуса готовности
+                document.getElementById('ready-button').addEventListener('click', () => {
+                    toggleReadyStatus(lobbyId);
+                });
+            } else {
+                alert('ID лобби не найдено.');
             }
-        });
-
-        // Обработчик для кнопки готовности
-        document.getElementById('ready-button').addEventListener('click', () => {
-            set(ref(database, 'lobbies/' + lobbyCode + '/players/' + username + '/ready'), true);
-        });
-
-        // Обработчик для выбора режима игры
-        document.getElementById('game-mode').addEventListener('change', (e) => {
-            const gameMode = e.target.value;
-            set(ref(database, 'lobbies/' + lobbyCode + '/gameMode'), gameMode);
         });
     </script>
 </head>
 <body>
-    <div class="container">
     <h1>Лобби</h1>
-
-    <!-- Код для создания и присоединения к лобби -->
-    <div class="lobby-container">
-        <div class="lobby-actions">
-            <button id="create-lobby">Создать Лобби</button>
-            <input type="text" id="lobby-code" placeholder="Введите код лобби">
-            <button id="join-lobby" class="join-button">Присоединиться</button>
-        </div>
-        <p class="lobby-code">Код лобби: <span id="lobby-code-display">12345</span></p>
-    </div>
-
-    <!-- Таблица игроков -->
-    <table class="players-table">
-        <thead>
-            <tr>
-                <th>Имя игрока</th>
-                <th>Статус готовности</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Player 1</td>
-                <td class="ready">Готов</td>
-            </tr>
-            <tr>
-                <td>Player 2</td>
-                <td class="not-ready">Не готов</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <!-- Выбор режима игры -->
-    <div class="mode-selection">
-        <label for="game-mode">Выберите режим:</label>
-        <select id="game-mode">
-            <option value="minigame1">Мини-игра 1</option>
-            <option value="minigame2">Мини-игра 2</option>
-        </select>
-        <button id="start-game">Начать игру</button>
-    </div>
+    <ul id="player-list">
+        <!-- Список игроков будет обновляться здесь -->
+    </ul>
+    <button id="ready-button">Готов / Не готов</button>
 </body>
 </html>

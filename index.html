@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Главная страничка</title>
+    <title>Онлайн Кинотеатр</title>
     <link rel="stylesheet" href="style.css">
     <script type="module">
         // Импорт необходимых функций из Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-        import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+        import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
+        // Конфигурация Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAZqT98d7V8gpCeNma7Aos3u7ol5_wOug4",
             authDomain: "games-63197.firebaseapp.com",
@@ -24,8 +25,57 @@
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
+        // Функция создания лобби
+        function createLobby() {
+            const lobbyId = generateLobbyId(); // Генерация уникального ID лобби
+            const username = localStorage.getItem('username'); // Получение имени пользователя из localStorage
 
-        // Проверка имени пользователя при загрузке страницы
+            const lobbyRef = ref(database, 'lobbies/' + lobbyId);
+
+            // Сохранение данных лобби в Firebase
+            set(lobbyRef, {
+                host: username,
+                players: {
+                    [username]: {
+                        ready: false
+                    }
+                }
+            }).then(() => {
+                alert(`Лобби создано! ID: ${lobbyId}`);
+                // Сохранение ID лобби в localStorage и переход на страницу лобби
+                localStorage.setItem('lobbyId', lobbyId);
+                window.location.href = `lobby.html?lobbyId=${lobbyId}`;
+            });
+        }
+
+        // Функция генерации уникального ID лобби
+        function generateLobbyId() {
+            return Math.random().toString(36).substring(2, 9); // Генерация 7-значного ID
+        }
+
+        // Функция для присоединения к лобби
+        function joinLobby(lobbyId) {
+            const username = localStorage.getItem('username'); // Получение имени пользователя из localStorage
+            const lobbyRef = ref(database, 'lobbies/' + lobbyId);
+
+            // Получение данных лобби из Firebase
+            get(lobbyRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    // Добавление игрока в лобби
+                    set(ref(database, `lobbies/${lobbyId}/players/${username}`), {
+                        ready: false
+                    }).then(() => {
+                        alert('Вы присоединились к лобби!');
+                        localStorage.setItem('lobbyId', lobbyId);
+                        window.location.href = `lobby.html?lobbyId=${lobbyId}`;
+                    });
+                } else {
+                    alert('Лобби с таким ID не найдено.');
+                }
+            });
+        }
+
+        // Проверка имени пользователя и отображение соответствующих элементов интерфейса
         document.addEventListener('DOMContentLoaded', () => {
             const username = localStorage.getItem('username');
             const authButton = document.getElementById('auth-button');
@@ -36,112 +86,57 @@
             const logoutButton = document.getElementById('logout-button');
 
             if (username) {
-                authButton?.remove(); // Удаляем кнопку регистрации/входа
-                const welcomeMessage = document.createElement('span');
-                welcomeMessage.textContent = `Добро пожаловать, ${username}!`;
-                welcomeMessage.classList.add('username-highlight');
-                welcomeMessageContainer.appendChild(welcomeMessage); // Добавляем элемент с приветствием
+                authButton?.remove(); // Удаление кнопки регистрации/входа
+                const welcomeMsg = document.createElement('span');
+                welcomeMsg.textContent = `Добро пожаловать, ${username}!`;
+                welcomeMsg.classList.add('username-highlight');
+                welcomeMessageContainer.appendChild(welcomeMsg);
 
                 // Показ выпадающего меню при клике на приветственное сообщение
-                welcomeMessage.addEventListener('click', () => {
+                welcomeMsg.addEventListener('click', () => {
                     dropdownMenu.classList.toggle('show');
-
                 });
 
-                // Обработчик клика на кнопку "Выход"
+                // Обработка выхода
                 logoutButton.addEventListener('click', () => {
-                    localStorage.removeItem('username'); // Удаляем имя пользователя из localStorage
-                    window.location.reload(); // Перезагружаем страницу
+                    localStorage.removeItem('username');
+                    window.location.reload();
                 });
-                
-                // Получаем информацию о пользователе из Firebase
+
+                // Проверка роли пользователя (админ или нет)
                 const userRef = ref(database, 'users/' + username);
                 get(userRef).then((snapshot) => {
                     if (snapshot.exists()) {
                         const userData = snapshot.val();
-
-                        // Проверяем роль пользователя
                         if (userData.role === 'admin') {
-                            adminButton.style.display = 'block'; // Показываем кнопку для админов
+                            adminButton.style.display = 'block'; // Показать кнопку для админов
                         } else {
-                            adminButton.style.display = 'none'; // Скрываем кнопку для обычных пользователей
+                            adminButton.style.display = 'none'; // Скрыть для обычных пользователей
                         }
                     } else {
-                        console.log('Пользователь не найден в базе данных.');
-                        adminButton.style.display = 'none'; // Если пользователя нет, скрываем кнопку
+                        adminButton.style.display = 'none'; // Если пользователя нет в БД
                     }
-                }).catch((error) => {
-                    console.error("Ошибка получения данных: ", error);
-                    adminButton.style.display = 'none'; // Если произошла ошибка, скрываем кнопку
                 });
             } else {
-                adminButton.style.display = 'none'; // Если пользователь не авторизован, скрываем кнопку
+                adminButton.style.display = 'none'; // Скрытие кнопки, если пользователь не авторизован
             }
-            // Обработчик для навигации по категориям
-            const currentPage = window.location.pathname.split('/').pop(); // Получаем имя текущей страницы
-            const categories = document.querySelectorAll('.categories li a'); // Находим все ссылки в категории
-
-            categories.forEach(category => {
-                if (category.getAttribute('href') === currentPage) {
-                    category.classList.add('active'); // Добавляем активный класс к текущей ссылке
-                }
-            });
         });
 
-        document.getElementById('create-lobby').addEventListener('click', createLobby);
-        document.getElementById('join-lobby').addEventListener('click', joinLobby);
+        // Привязываем обработчики событий к кнопкам
+        const createLobbyButton = document.getElementById('createLobbyButton');
+        const joinLobbyButton = document.getElementById('joinLobbyButton');
 
-        function createLobby() {
-            const lobbyCode = Math.random().toString(36).substring(2, 8); // Генерация кода лобби
-            const username = localStorage.getItem('username');
-
-            // Создаем запись лобби в Firebase
-            set(ref(database, 'lobbies/' + lobbyCode), {
-                host: username,
-                players: {
-                    [username]: {
-                        ready: false
-                    }
-                },
-                gameMode: 'waiting',
-                playerCount: 1
-            }).then(() => {
-                window.location.href = `lobby.html?lobbyCode=${lobbyCode}`; // Перенаправление в лобби
-            }).catch((error) => {
-                console.error("Ошибка создания лобби:", error);
-            });
-        }
-
-        function joinLobby() {
-            const lobbyCode = prompt("Введите код лобби:");
-            const username = localStorage.getItem('username');
-
-            // Проверка наличия лобби с введенным кодом
-            const lobbyRef = ref(database, 'lobbies/' + lobbyCode);
-            get(lobbyRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const lobbyData = snapshot.val();
-
-                    // Добавление пользователя в лобби
-                    set(ref(database, 'lobbies/' + lobbyCode + '/players/' + username), {
-                        ready: false
-                    }).then(() => {
-                        window.location.href = `lobby.html?lobbyCode=${lobbyCode}`; // Перенаправление в лобби
-                    });
-                } else {
-                    alert("Лобби с таким кодом не существует.");
-                }
-            }).catch((error) => {
-                console.error("Ошибка при подключении к лобби:", error);
-            });
-        }
+        createLobbyButton?.addEventListener('click', createLobby);
+        joinLobbyButton?.addEventListener('click', () => {
+            const lobbyId = document.getElementById('lobbyIdInput').value;
+            joinLobby(lobbyId);
+        });
     </script>
 </head>
 <body>
     <header>
         <div class="auth-buttons">
             <a href="account.html" id="auth-button" class="auth-button">Регистрация / Вход</a>
-
             <div id="welcome-container" class="welcome-container">
                 <span id="welcome-message"></span>
                 <div id="dropdown-menu" class="dropdown-menu">
@@ -152,11 +147,10 @@
         <h1>Test</h1>
     </header>
 
-    <div class="lobby-buttons">
-        <button id="create-lobby">Создать лобби</button>
-        <button id="join-lobby">Присоединиться к лобби</button>
-    </div>
-
+    <h1>Создание или присоединение к лобби</h1>
+    <button id="createLobbyButton">Создать лобби</button>
+    <input type="text" id="lobbyIdInput" placeholder="Введите ID лобби">
+    <button id="joinLobbyButton">Присоединиться к лобби</button>
 
     <!-- Кнопка для перехода на admin.html -->
     <div class="admin-button">
