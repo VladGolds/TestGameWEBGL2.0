@@ -35,19 +35,20 @@
         onValue(boardRef, (snapshot) => {
             const boardData = snapshot.val() || [['', '', ''], ['', '', ''], ['', '', '']];
             boardData.forEach((row, rowIndex) => {
-                row.forEach((cell, cellIndex) => {
-                const cellElement = document.getElementById(`cell-${rowIndex}-${cellIndex}`);
-                cellElement.textContent = cell;
+                    row.forEach((cell, cellIndex) => {
+                    const cellElement = document.getElementById(`cell-${rowIndex}-${cellIndex}`);
+                    cellElement.textContent = cell;
 
-                // Сброс старых классов
-                cellElement.classList.remove('x', 'o');
+                    // Сброс старых классов
+                    cellElement.classList.remove('x', 'o');
 
-                // Добавление соответствующих классов
-                if (cell === 'X') {
-                    cellElement.classList.add('x');
-                } else if (cell === 'O') {
-                    cellElement.classList.add('o');
-                }
+                    // Добавление соответствующих классов
+                    if (cell === 'X') {
+                        cellElement.classList.add('x');
+                    } else if (cell === 'O') {
+                        cellElement.classList.add('o');
+                    }
+                });
             });
         });
 
