@@ -61,10 +61,12 @@
                     startGameButton.disabled = true; // Иначе отключаем кнопку
                 }
 
+                // Если игра началась, перенаправляем всех игроков на страницу игры
                 if (lobbyData.gameStarted) {
-                window.location.href = 'Tic-Tac-Toe.html?lobbyId=' + lobbyId;
-            }
-        });
+                    window.location.href = 'Tic-Tac-Toe.html?lobbyId=' + lobbyId;
+                }
+            });
+        }
 
         // Функция для изменения статуса готовности игрока
         function toggleReadyStatus(lobbyId) {
