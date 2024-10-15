@@ -157,10 +157,19 @@
 
     function switchTurn(lobbyId) {
         const turnRef = ref(database, `games/${lobbyId}/turn`);
+        
         get(turnRef).then((snapshot) => {
             const currentTurn = snapshot.val();
             const nextTurn = (currentTurn === 'X') ? 'O' : 'X';
-            set(turnRef, nextTurn);
+            
+            // Устанавливаем следующий ход
+            set(turnRef, nextTurn).then(() => {
+                console.log(`Теперь ход игрока: ${nextTurn}`);
+            }).catch((error) => {
+                console.error('Ошибка при переключении хода:', error);
+            });
+        }).catch((error) => {
+            console.error('Ошибка получения текущего хода:', error);
         });
     }
 
