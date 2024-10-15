@@ -6,101 +6,95 @@
     <title>Крестики-нолики</title>
     <link rel="stylesheet" href="style.css">
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-        import { getDatabase, ref, onValue, update, set } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref, onValue, update, set, get } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAZqT98d7V8gpCeNma7Aos3u7ol5_wOug4",
-            authDomain: "games-63197.firebaseapp.com",
-            databaseURL: "https://games-63197-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "games-63197",
-            storageBucket: "games-63197.appspot.com",
-            messagingSenderId: "217470228668",
-            appId: "1:217470228668:web:30844724050d278a7358b9"
-        };
+    const firebaseConfig = {
+        apiKey: "AIzaSyAZqT98d7V8gpCeNma7Aos3u7ol5_wOug4",
+        authDomain: "games-63197.firebaseapp.com",
+        databaseURL: "https://games-63197-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "games-63197",
+        storageBucket: "games-63197.appspot.com",
+        messagingSenderId: "217470228668",
+        appId: "1:217470228668:web:30844724050d278a7358b9"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
 
-        let currentPlayer = null;  // Игрок, который делает ход ('X' или 'O')
-        let isMyTurn = false;  // Флаг, указывающий, чей ход
+    let currentPlayer = null;
+    let isMyTurn = false;
 
-        const lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
+    const lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
 
-        function initGame(lobbyId) {
-            const boardRef = firebase.database().ref(`games/${lobbyId}/board`);
-            const turnRef = firebase.database().ref(`games/${lobbyId}/turn`);
+    function initGame(lobbyId) {
+        const boardRef = ref(database, `games/${lobbyId}/board`);
+        const turnRef = ref(database, `games/${lobbyId}/turn`);
 
-            // Инициализация игрового поля
-            boardRef.on('value', (snapshot) => {
-                const boardData = snapshot.val() || [['', '', ''], ['', '', ''], ['', '', '']];
-                boardData.forEach((row, rowIndex) => {
-                    row.forEach((cell, cellIndex) => {
-                        document.getElementById(`cell-${rowIndex}-${cellIndex}`).textContent = cell;
-                    });
+        // Инициализация игрового поля
+        onValue(boardRef, (snapshot) => {
+            const boardData = snapshot.val() || [['', '', ''], ['', '', ''], ['', '', '']];
+            boardData.forEach((row, rowIndex) => {
+                row.forEach((cell, cellIndex) => {
+                    document.getElementById(`cell-${rowIndex}-${cellIndex}`).textContent = cell;
                 });
             });
+        });
 
-            // Получение текущего хода
-            turnRef.on('value', (snapshot) => {
-                const turn = snapshot.val() || 'X';
-                document.getElementById('turn-info').textContent = `Ход игрока: ${turn}`;
-                isMyTurn = (turn === currentPlayer);
-            });
+        // Отслеживание хода
+        onValue(turnRef, (snapshot) => {
+            const turn = snapshot.val() || 'X';
+            document.getElementById('turn-info').textContent = `Ход игрока: ${turn}`;
+            isMyTurn = (turn === currentPlayer);
+        });
 
-            // Устанавливаем текущего игрока
-            if (!currentPlayer) {
-                getCurrentPlayer(lobbyId);
+        if (!currentPlayer) {
+            getCurrentPlayer(lobbyId);
+        }
+    }
+
+    function getCurrentPlayer(lobbyId) {
+        const playerRef = ref(database, `games/${lobbyId}/players`);
+        get(playerRef).then((snapshot) => {
+            const players = snapshot.val() || {};
+            if (!players.X) {
+                currentPlayer = 'X';
+                update(playerRef, { X: true });
+            } else if (!players.O) {
+                currentPlayer = 'O';
+                update(playerRef, { O: true });
             }
+            alert(`Вы играете за: ${currentPlayer}`);
+        });
+    }
+
+    function handleClick(row, col) {
+        if (!isMyTurn) {
+            alert('Это не ваш ход!');
+            return;
         }
 
-        // Функция получения игрока
-        function getCurrentPlayer(lobbyId) {
-            const playerRef = firebase.database().ref(`games/${lobbyId}/players`);
-            playerRef.once('value', (snapshot) => {
-                const players = snapshot.val() || {};
-                if (!players.X) {
-                    currentPlayer = 'X';
-                    playerRef.update({ X: true });
-                } else if (!players.O) {
-                    currentPlayer = 'O';
-                    playerRef.update({ O: true });
-                }
-                alert(`Вы играете за: ${currentPlayer}`);
-            });
-        }
-
-        // Функция обработки клика по ячейке
-        function handleClick(row, col) {
-            if (!isMyTurn) {
-                alert('Это не ваш ход!');
-                return;
+        const cellRef = ref(database, `games/${lobbyId}/board/${row}/${col}`);
+        get(cellRef).then((snapshot) => {
+            if (snapshot.val() === '') {
+                set(cellRef, currentPlayer).then(() => switchTurn(lobbyId));
+            } else {
+                alert('Эта клетка уже занята!');
             }
+        });
+    }
 
-            const cellRef = firebase.database().ref(`games/${lobbyId}/board/${row}/${col}`);
-            cellRef.once('value').then((snapshot) => {
-                if (snapshot.val() === '') {
-                    cellRef.set(currentPlayer).then(() => {
-                        switchTurn(lobbyId);
-                    });
-                } else {
-                    alert('Эта клетка уже занята!');
-                }
-            });
-        }
+    function switchTurn(lobbyId) {
+        const turnRef = ref(database, `games/${lobbyId}/turn`);
+        get(turnRef).then((snapshot) => {
+            const currentTurn = snapshot.val();
+            const nextTurn = (currentTurn === 'X') ? 'O' : 'X';
+            set(turnRef, nextTurn);
+        });
+    }
 
-        // Функция смены хода
-        function switchTurn(lobbyId) {
-            const turnRef = firebase.database().ref(`games/${lobbyId}/turn`);
-            turnRef.once('value').then((snapshot) => {
-                const currentTurn = snapshot.val();
-                const nextTurn = (currentTurn === 'X') ? 'O' : 'X';
-                turnRef.set(nextTurn);
-            });
-        }
-
-        // Инициализация игры
-        initGame(lobbyId);
+    // Инициализация игры
+    initGame(lobbyId);
     </script>
     <style>
         body {
