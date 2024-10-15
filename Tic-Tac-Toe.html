@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-        import { getDatabase, ref, onValue, update, set } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+        import { getDatabase, ref, onValue, get, set, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAZqT98d7V8gpCeNma7Aos3u7ol5_wOug4",
@@ -22,15 +22,16 @@
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        let currentPlayer = null;  // Игрок, который делает ход ('X' или 'O')
-        let isMyTurn = false;  // Флаг, указывающий, чей ход
+        let currentPlayer = null;
+        let isMyTurn = false;
+
+        const lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
 
         function initGame(lobbyId) {
-            const boardRef = firebase.database().ref(`games/${lobbyId}/board`);
-            const turnRef = firebase.database().ref(`games/${lobbyId}/turn`);
+            const boardRef = ref(database, `games/${lobbyId}/board`);
+            const turnRef = ref(database, `games/${lobbyId}/turn`);
 
-            // Инициализация игрового поля
-            boardRef.on('value', (snapshot) => {
+            onValue(boardRef, (snapshot) => {
                 const boardData = snapshot.val() || [['', '', ''], ['', '', ''], ['', '', '']];
                 boardData.forEach((row, rowIndex) => {
                     row.forEach((cell, cellIndex) => {
@@ -39,46 +40,42 @@
                 });
             });
 
-            // Получение текущего хода
-            turnRef.on('value', (snapshot) => {
+            onValue(turnRef, (snapshot) => {
                 const turn = snapshot.val() || 'X';
                 document.getElementById('turn-info').textContent = `Ход игрока: ${turn}`;
                 isMyTurn = (turn === currentPlayer);
             });
 
-            // Устанавливаем текущего игрока
-            if (!currentPlayer) {
-                getCurrentPlayer(lobbyId);
-            }
+            getCurrentPlayer(lobbyId);
         }
 
-        // Функция получения игрока
         function getCurrentPlayer(lobbyId) {
-            const playerRef = firebase.database().ref(`games/${lobbyId}/players`);
-            playerRef.once('value', (snapshot) => {
+            const playerRef = ref(database, `games/${lobbyId}/players`);
+            get(playerRef).then((snapshot) => {
                 const players = snapshot.val() || {};
                 if (!players.X) {
                     currentPlayer = 'X';
-                    playerRef.update({ X: true });
+                    update(playerRef, { X: true });
                 } else if (!players.O) {
                     currentPlayer = 'O';
-                    playerRef.update({ O: true });
+                    update(playerRef, { O: true });
+                } else {
+                    alert('В игре уже два игрока!');
                 }
                 alert(`Вы играете за: ${currentPlayer}`);
             });
         }
 
-        // Функция обработки клика по ячейке
         function handleClick(row, col) {
             if (!isMyTurn) {
                 alert('Это не ваш ход!');
                 return;
             }
 
-            const cellRef = firebase.database().ref(`games/${lobbyId}/board/${row}/${col}`);
-            cellRef.once('value').then((snapshot) => {
+            const cellRef = ref(database, `games/${lobbyId}/board/${row}/${col}`);
+            get(cellRef).then((snapshot) => {
                 if (snapshot.val() === '') {
-                    cellRef.set(currentPlayer).then(() => {
+                    set(cellRef, currentPlayer).then(() => {
                         switchTurn(lobbyId);
                     });
                 } else {
@@ -87,72 +84,31 @@
             });
         }
 
-        // Функция смены хода
         function switchTurn(lobbyId) {
-            const turnRef = firebase.database().ref(`games/${lobbyId}/turn`);
-            turnRef.once('value').then((snapshot) => {
+            const turnRef = ref(database, `games/${lobbyId}/turn`);
+            get(turnRef).then((snapshot) => {
                 const currentTurn = snapshot.val();
                 const nextTurn = (currentTurn === 'X') ? 'O' : 'X';
-                turnRef.set(nextTurn);
+                set(turnRef, nextTurn);
             });
         }
 
-        // Инициализация игры
         initGame(lobbyId);
     </script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-
-        h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        #board {
-            display: grid;
-            grid-template-columns: repeat(3, 100px);
-            grid-template-rows: repeat(3, 100px);
-            gap: 5px;
-        }
-
-        .cell {
-            width: 100px;
-            height: 100px;
-            background-color: #f0f0f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            cursor: pointer;
-        }
-
-        #turn-info {
-            margin-top: 20px;
-            font-size: 18px;
-        }
-    </style>
 </head>
 <body>
     <h1>Крестики-нолики</h1>
     <div id="board">
-        <div id="cell-0-0" class="cell"></div>
-        <div id="cell-0-1" class="cell"></div>
-        <div id="cell-0-2" class="cell"></div>
-        <div id="cell-1-0" class="cell"></div>
-        <div id="cell-1-1" class="cell"></div>
-        <div id="cell-1-2" class="cell"></div>
-        <div id="cell-2-0" class="cell"></div>
-        <div id="cell-2-1" class="cell"></div>
-        <div id="cell-2-2" class="cell"></div>
+        <div id="cell-0-0" onclick="handleClick(0, 0)"></div>
+        <div id="cell-0-1" onclick="handleClick(0, 1)"></div>
+        <div id="cell-0-2" onclick="handleClick(0, 2)"></div>
+        <div id="cell-1-0" onclick="handleClick(1, 0)"></div>
+        <div id="cell-1-1" onclick="handleClick(1, 1)"></div>
+        <div id="cell-1-2" onclick="handleClick(1, 2)"></div>
+        <div id="cell-2-0" onclick="handleClick(2, 0)"></div>
+        <div id="cell-2-1" onclick="handleClick(2, 1)"></div>
+        <div id="cell-2-2" onclick="handleClick(2, 2)"></div>
     </div>
-    <p id="turn-info">Ход игрока: X</p>
+    <p id="turn-info"></p>
 </body>
 </html>
