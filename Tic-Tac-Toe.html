@@ -68,7 +68,7 @@
         });
     }
 
-    function handleClick(row, col) {
+    window.handleClick = function (row, col) {
         if (!isMyTurn) {
             alert('Это не ваш ход!');
             return;
@@ -82,7 +82,7 @@
                 alert('Эта клетка уже занята!');
             }
         });
-    }
+    };
 
     function switchTurn(lobbyId) {
         const turnRef = ref(database, `games/${lobbyId}/turn`);
