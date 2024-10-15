@@ -45,11 +45,11 @@
         onValue(turnRef, (snapshot) => {
             const turn = snapshot.val() || 'X';
             document.getElementById('turn-info').textContent = `Ход игрока: ${turn}`;
-            isMyTurn = (turn === currentPlayer);
+            isMyTurn = (turn === currentPlayer); // Обновляем isMyTurn при каждом изменении хода
         });
 
         if (!currentPlayer) {
-            getCurrentPlayer(lobbyId);
+            getCurrentPlayer(lobbyId); // Инициализируем текущего игрока
         }
     }
 
@@ -57,31 +57,55 @@
         const playerRef = ref(database, `games/${lobbyId}/players`);
         get(playerRef).then((snapshot) => {
             const players = snapshot.val() || {};
+
+            // Определяем за кого будет играть текущий игрок
             if (!players.X) {
                 currentPlayer = 'X';
                 update(playerRef, { X: true });
             } else if (!players.O) {
                 currentPlayer = 'O';
                 update(playerRef, { O: true });
+            } else {
+                alert('Игра уже заполнена двумя игроками!');
+                return;
             }
+
             alert(`Вы играете за: ${currentPlayer}`);
+
+            // Проверяем, чей сейчас ход, сразу после присвоения роли игрока
+            const turnRef = ref(database, `games/${lobbyId}/turn`);
+            get(turnRef).then((snapshot) => {
+                const turn = snapshot.val() || 'X';
+                isMyTurn = (turn === currentPlayer); // Убедимся, что isMyTurn корректно обновлён
+            });
         });
     }
 
     window.handleClick = function (row, col) {
+        console.log(`Клик по клетке: [${row}, ${col}]`);
+
         if (!isMyTurn) {
             alert('Это не ваш ход!');
+            console.log(`Ход игрока: ${currentPlayer}. Но сейчас ход другого игрока.`);
             return;
         }
 
         const cellRef = ref(database, `games/${lobbyId}/board/${row}/${col}`);
         get(cellRef).then((snapshot) => {
-            if (snapshot.val() === '') {
-                set(cellRef, currentPlayer).then(() => switchTurn(lobbyId));
+            const cellValue = snapshot.val();
+            console.log(`Текущее значение клетки: ${cellValue}`);
+
+            if (cellValue === '') {
+                set(cellRef, currentPlayer)
+                    .then(() => {
+                        console.log(`Клетка [${row}, ${col}] установлена: ${currentPlayer}`);
+                        switchTurn(lobbyId);
+                    })
+                    .catch((error) => console.error('Ошибка установки значения клетки:', error));
             } else {
                 alert('Эта клетка уже занята!');
             }
-        });
+        }).catch((error) => console.error('Ошибка получения значения клетки:', error));
     };
 
     function switchTurn(lobbyId) {
