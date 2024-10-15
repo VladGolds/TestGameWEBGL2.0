@@ -53,6 +53,37 @@
         }
     }
 
+    function checkWinner(board) {
+        const winningCombinations = [
+            // Горизонтальные
+            [[0, 0], [0, 1], [0, 2]],
+            [[1, 0], [1, 1], [1, 2]],
+            [[2, 0], [2, 1], [2, 2]],
+            // Вертикальные
+            [[0, 0], [1, 0], [2, 0]],
+            [[0, 1], [1, 1], [2, 1]],
+            [[0, 2], [1, 2], [2, 2]],
+            // Диагональные
+            [[0, 0], [1, 1], [2, 2]],
+            [[0, 2], [1, 1], [2, 0]]
+        ];
+
+        for (const combination of winningCombinations) {
+            const [a, b, c] = combination;
+            if (board[a[0]][a[1]] && board[a[0]][a[1]] === board[b[0]][b[1]] && board[a[0]][a[1]] === board[c[0]][c[1]]) {
+                return board[a[0]][a[1]]; // Возвращаем символ победителя
+            }
+        }
+
+        // Проверяем на ничью (если нет пустых клеток)
+        const isDraw = board.every(row => row.every(cell => cell !== ''));
+        if (isDraw) {
+            return 'draw';
+        }
+
+        return null; // Пока нет победителя
+    }
+
     function getCurrentPlayer(lobbyId) {
         const playerRef = ref(database, `games/${lobbyId}/players`);
         get(playerRef).then((snapshot) => {
@@ -100,7 +131,22 @@
                 set(cellRef, currentPlayer)
                     .then(() => {
                         console.log(`Клетка [${row}, ${col}] установлена: ${currentPlayer}`);
-                        switchTurn(lobbyId);
+
+                        // Получаем текущее состояние игрового поля
+                        get(ref(database, `games/${lobbyId}/board`)).then((snapshot) => {
+                            const boardData = snapshot.val();
+                            const winner = checkWinner(boardData);
+
+                            if (winner) {
+                                if (winner === 'draw') {
+                                    alert('Ничья!');
+                                } else {
+                                    alert(`Победил игрок: ${winner}`);
+                                }
+                            } else {
+                                switchTurn(lobbyId);
+                            }
+                        });
                     })
                     .catch((error) => console.error('Ошибка установки значения клетки:', error));
             } else {
