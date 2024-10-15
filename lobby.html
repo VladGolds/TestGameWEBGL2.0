@@ -59,11 +59,24 @@
             });
         }
 
+        function startGame(lobbyId) {
+            const gameUrl = 'Tic-Tac-Toe.html'; // Замена на URL игры
+            // Обновляем статус лобби в Firebase
+            update(ref(database, 'lobbies/' + lobbyId), {
+                gameStarted: true
+            }).then(() => {
+                window.location.href = gameUrl + '?lobbyId=' + lobbyId; // Переход к игре
+            });
+        }
+
         // Обработка нажатия на кнопку "Готов / Не готов"
         document.addEventListener('DOMContentLoaded', () => {
             const lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
             if (lobbyId) {
                 loadLobby(lobbyId); // Загружаем данные о лобби при загрузке страницы
+
+                // Отображаем ID лобби
+                document.getElementById('lobby-id').textContent = `ID лобби: ${lobbyId}`;
 
                 // Обработка смены статуса готовности
                 document.getElementById('ready-button').addEventListener('click', () => {
@@ -77,9 +90,11 @@
 </head>
 <body>
     <h1>Лобби</h1>
+    <p id="lobby-id"></p>
     <ul id="player-list">
         <!-- Список игроков будет обновляться здесь -->
     </ul>
     <button id="ready-button">Готов / Не готов</button>
+    <button id="start-game-button" style="display:none;" disabled>Начать игру</button>
 </body>
 </html>

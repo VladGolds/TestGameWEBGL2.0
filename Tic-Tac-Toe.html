@@ -1,50 +1,149 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tic-Tac-Toe Multiplayer</title>
+    <title>Крестики-нолики</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+        import { getDatabase, ref, onValue, update, set } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZqT98d7V8gpCeNma7Aos3u7ol5_wOug4",
+            authDomain: "games-63197.firebaseapp.com",
+            databaseURL: "https://games-63197-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "games-63197",
+            storageBucket: "games-63197.appspot.com",
+            messagingSenderId: "217470228668",
+            appId: "1:217470228668:web:30844724050d278a7358b9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        let currentPlayer = 'X'; // Начинаем с игрока X
+        let isMyTurn = false; // Следим за очередностью хода
+
+        function initGame(lobbyId) {
+            const boardRef = ref(database, `games/${lobbyId}/board`);
+            const turnRef = ref(database, `games/${lobbyId}/turn`);
+
+            // Отображение игрового поля
+            onValue(boardRef, (snapshot) => {
+                const boardData = snapshot.val();
+                boardData.forEach((row, rowIndex) => {
+                    row.forEach((cell, cellIndex) => {
+                        document.getElementById(`cell-${rowIndex}-${cellIndex}`).textContent = cell;
+                    });
+                });
+            });
+
+            // Проверка чей сейчас ход
+            onValue(turnRef, (snapshot) => {
+                const turn = snapshot.val();
+                isMyTurn = (turn === currentPlayer); // Ход текущего игрока
+                document.getElementById('turn-info').textContent = `Ход игрока: ${turn}`;
+            });
+        }
+
+        function makeMove(row, col, lobbyId) {
+            if (!isMyTurn) {
+                alert('Это не ваш ход!');
+                return;
+            }
+
+            const cellRef = ref(database, `games/${lobbyId}/board/${row}/${col}`);
+
+            // Проверяем, свободна ли клетка
+            onValue(cellRef, (snapshot) => {
+                if (snapshot.val() === '') {
+                    update(cellRef, currentPlayer).then(() => {
+                        switchTurn(lobbyId); // Меняем ход
+                    });
+                }
+            }, { onlyOnce: true });
+        }
+
+        function switchTurn(lobbyId) {
+            const turnRef = ref(database, `games/${lobbyId}/turn`);
+            const nextTurn = (currentPlayer === 'X') ? 'O' : 'X';
+            update(turnRef, nextTurn);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
+            const username = localStorage.getItem('username');
+            const player = username === 'host' ? 'X' : 'O'; // Определение игрока
+            currentPlayer = player;
+
+            if (lobbyId) {
+                initGame(lobbyId);
+
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.addEventListener('click', (e) => {
+                        const [row, col] = e.target.id.split('-').slice(1);
+                        makeMove(row, col, lobbyId);
+                    });
+                });
+            } else {
+                alert('ID лобби не найдено.');
+            }
+        });
+    </script>
     <style>
-        body { font-family: Arial, sans-serif; }
-        .game-board {
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        #board {
             display: grid;
             grid-template-columns: repeat(3, 100px);
             grid-template-rows: repeat(3, 100px);
             gap: 5px;
         }
+
         .cell {
             width: 100px;
             height: 100px;
             background-color: #f0f0f0;
             display: flex;
-            justify-content: center;
             align-items: center;
-            font-size: 2em;
+            justify-content: center;
+            font-size: 32px;
             cursor: pointer;
+        }
+
+        #turn-info {
+            margin-top: 20px;
+            font-size: 18px;
         }
     </style>
 </head>
 <body>
-    <h1>Tic-Tac-Toe Multiplayer</h1>
-    <div id="gameBoard" class="game-board"></div>
-
-    <script>
-        // Инициализация игрового поля
-        const gameBoard = document.getElementById('gameBoard');
-        for (let i = 0; i < 9; i++) {
-            const cell = document.createElement('div');
-            cell.classList.add('cell');
-            cell.dataset.index = i;
-            cell.addEventListener('click', handleCellClick);
-            gameBoard.appendChild(cell);
-        }
-
-        function handleCellClick(event) {
-            const cell = event.target;
-            if (!cell.textContent) {
-                cell.textContent = 'X';  // временная метка для хода
-            }
-        }
-    </script>
+    <h1>Крестики-нолики</h1>
+    <div id="board">
+        <div id="cell-0-0" class="cell"></div>
+        <div id="cell-0-1" class="cell"></div>
+        <div id="cell-0-2" class="cell"></div>
+        <div id="cell-1-0" class="cell"></div>
+        <div id="cell-1-1" class="cell"></div>
+        <div id="cell-1-2" class="cell"></div>
+        <div id="cell-2-0" class="cell"></div>
+        <div id="cell-2-1" class="cell"></div>
+        <div id="cell-2-2" class="cell"></div>
+    </div>
+    <p id="turn-info">Ход игрока: X</p>
 </body>
 </html>
