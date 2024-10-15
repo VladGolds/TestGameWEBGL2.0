@@ -31,6 +31,9 @@
             onValue(lobbyRef, (snapshot) => {
                 const lobbyData = snapshot.val();
                 const playerList = document.getElementById('player-list');
+                const startGameButton = document.getElementById('start-game-button');
+                const currentUsername = localStorage.getItem('username');
+
                 playerList.innerHTML = ''; // Очищаем список перед обновлением
 
                 Object.keys(lobbyData.players).forEach(player => {
@@ -38,7 +41,21 @@
                     playerElement.textContent = player + (player === lobbyData.host ? ' (Хост)' : '') +
                         (lobbyData.players[player].ready ? ' - готов' : ' - не готов');
                     playerList.appendChild(playerElement);
+
+                    if (!isReady) {
+                        allReady = false; // Проверяем, все ли игроки готовы
+                    }
+
+                    if (isHost && currentUsername === player) {
+                        startGameButton.style.display = 'block'; // Показать кнопку старта только хосту
+                    }
                 });
+
+                if (allReady) {
+                    startGameButton.disabled = false; // Если все игроки готовы, включаем кнопку
+                } else {
+                    startGameButton.disabled = true; // Иначе отключаем кнопку
+                }
             });
         }
 
@@ -81,6 +98,10 @@
                 // Обработка смены статуса готовности
                 document.getElementById('ready-button').addEventListener('click', () => {
                     toggleReadyStatus(lobbyId);
+                });
+
+                document.getElementById('start-game-button').addEventListener('click', () => {
+                    startGame(lobbyId);
                 });
             } else {
                 alert('ID лобби не найдено.');
