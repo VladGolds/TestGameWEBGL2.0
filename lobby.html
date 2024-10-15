@@ -60,8 +60,11 @@
                 } else {
                     startGameButton.disabled = true; // Иначе отключаем кнопку
                 }
-            });
-        }
+
+                if (lobbyData.gameStarted) {
+                window.location.href = 'Tic-Tac-Toe.html?lobbyId=' + lobbyId;
+            }
+        });
 
         // Функция для изменения статуса готовности игрока
         function toggleReadyStatus(lobbyId) {
