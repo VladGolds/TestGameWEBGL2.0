@@ -40,8 +40,9 @@
 
                 Object.keys(lobbyData.players).forEach(player => {
                     const playerElement = document.createElement('li');
+                    const isHost = player === lobbyData.host;
                     const isReady = lobbyData.players[player].ready;
-                    playerElement.textContent = player + (player === lobbyData.host ? ' (Хост)' : '') +
+                    playerElement.textContent = player + (isHost ? ' (Хост)' : '') +
                         (lobbyData.players[player].ready ? ' - готов' : ' - не готов');
                     playerList.appendChild(playerElement);
 
