@@ -135,8 +135,29 @@
         });
     }
 
+    function switchTurn(lobbyId) {
+        const turnRef = ref(database, `games/${lobbyId}/turn`);
+        
+        get(turnRef).then((snapshot) => {
+            const currentTurn = snapshot.val();
+            const nextTurn = (currentTurn === 'X') ? 'O' : 'X';
+
+            // Отладка текущего и следующего хода
+            console.log(`Текущий ход: ${currentTurn}, следующий ход: ${nextTurn}`);
+            
+            // Устанавливаем следующий ход
+            set(turnRef, nextTurn).then(() => {
+                console.log(`Теперь ход игрока: ${nextTurn}`);
+            }).catch((error) => {
+                console.error('Ошибка при переключении хода:', error);
+            });
+        }).catch((error) => {
+            console.error('Ошибка получения текущего хода:', error);
+        });
+    }
+
     window.handleClick = function (row, col) {
-        console.log(`Клик по клетке: [${row}, ${col}]`);
+        console.log(`Клик по клетке: [${row}, ${col}], текущий игрок: ${currentPlayer}, мой ход: ${isMyTurn}`);
 
         if (!isMyTurn) {
             alert('Это не ваш ход!');
@@ -150,7 +171,7 @@
             const cellValue = snapshot.val();
             console.log(`Текущее значение клетки: ${cellValue}`);
 
-            if (cellValue === null) {  // Проверка на пустую клетку
+            if (cellValue === null) {  // Исправлено на проверку null
                 set(cellRef, currentPlayer)
                     .then(() => {
                         console.log(`Клетка [${row}, ${col}] установлена: ${currentPlayer}`);
@@ -178,27 +199,6 @@
             }
         }).catch((error) => console.error('Ошибка получения значения клетки:', error));
     };
-
-    function switchTurn(lobbyId) {
-        const turnRef = ref(database, `games/${lobbyId}/turn`);
-        
-        get(turnRef).then((snapshot) => {
-            const currentTurn = snapshot.val();
-            const nextTurn = (currentTurn === 'X') ? 'O' : 'X';
-            
-            // Устанавливаем следующий ход
-            set(turnRef, nextTurn).then(() => {
-                console.log(`Теперь ход игрока: ${nextTurn}`);
-
-                // Обновляем переменную isMyTurn после изменения хода
-                isMyTurn = (nextTurn === currentPlayer);
-            }).catch((error) => {
-                console.error('Ошибка при переключении хода:', error);
-            });
-        }).catch((error) => {
-            console.error('Ошибка получения текущего хода:', error);
-        });
-    }
 
     // Инициализация игры
     initGame(lobbyId);
