@@ -36,8 +36,11 @@
 
                 playerList.innerHTML = ''; // Очищаем список перед обновлением
 
+                let allReady = true;
+
                 Object.keys(lobbyData.players).forEach(player => {
                     const playerElement = document.createElement('li');
+                    const isReady = lobbyData.players[player].ready;
                     playerElement.textContent = player + (player === lobbyData.host ? ' (Хост)' : '') +
                         (lobbyData.players[player].ready ? ' - готов' : ' - не готов');
                     playerList.appendChild(playerElement);
