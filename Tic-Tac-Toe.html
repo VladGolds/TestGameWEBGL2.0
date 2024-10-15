@@ -129,8 +129,19 @@
             // Проверяем, чей сейчас ход, сразу после присвоения роли игрока
             const turnRef = ref(database, `games/${lobbyId}/turn`);
             get(turnRef).then((snapshot) => {
-                const turn = snapshot.val() || 'X';
-                isMyTurn = (turn === currentPlayer); // Убедимся, что isMyTurn корректно обновлён
+                let turn = snapshot.val();
+                if (!turn) {
+                    // Если первый ход, устанавливаем ход X
+                    turn = 'X';
+                    set(turnRef, 'X');
+                }
+
+                isMyTurn = (turn === currentPlayer); // Обновляем isMyTurn
+
+                // Если текущий игрок X и это его первый ход, переключаем ход
+                if (currentPlayer === 'X' && isMyTurn) {
+                    switchTurn(lobbyId);  // Сразу переключаем ход к O после первого хода X
+                }
             });
         });
     }
