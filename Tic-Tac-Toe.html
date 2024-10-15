@@ -91,11 +91,12 @@
         }
 
         const cellRef = ref(database, `games/${lobbyId}/board/${row}/${col}`);
+        
         get(cellRef).then((snapshot) => {
             const cellValue = snapshot.val();
             console.log(`Текущее значение клетки: ${cellValue}`);
 
-            if (cellValue === '') {
+            if (cellValue === null) {  // Исправлено на проверку null
                 set(cellRef, currentPlayer)
                     .then(() => {
                         console.log(`Клетка [${row}, ${col}] установлена: ${currentPlayer}`);
