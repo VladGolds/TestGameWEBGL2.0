@@ -22,6 +22,8 @@
         // Инициализация Firebase
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
+        const lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
+        const currentUsername = localStorage.getItem('username');
 
         // Функция загрузки лобби и игроков
         function loadLobby(lobbyId) {
@@ -32,7 +34,6 @@
                 const lobbyData = snapshot.val();
                 const playerList = document.getElementById('player-list');
                 const startGameButton = document.getElementById('start-game-button');
-                const currentUsername = localStorage.getItem('username');
 
                 playerList.innerHTML = ''; // Очищаем список перед обновлением
 
