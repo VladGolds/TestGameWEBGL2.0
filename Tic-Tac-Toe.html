@@ -22,24 +22,16 @@
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        let currentPlayer = 'X'; // Начинаем с игрока X
-        let isMyTurn = false; // Следим за очередностью хода
+        let currentPlayer = null;  // Игрок, который делает ход ('X' или 'O')
+        let isMyTurn = false;  // Флаг, указывающий, чей ход
 
         function initGame(lobbyId) {
-            const boardRef = ref(database, `games/${lobbyId}/board`);
-            const turnRef = ref(database, `games/${lobbyId}/turn`);
+            const boardRef = firebase.database().ref(`games/${lobbyId}/board`);
+            const turnRef = firebase.database().ref(`games/${lobbyId}/turn`);
 
-            // Инициализация игрового поля, если оно не существует
-            onValue(boardRef, (snapshot) => {
-                let boardData = snapshot.val();
-
-                // Если игровое поле пустое (null), инициализируем его пустыми значениями
-                if (!boardData) {
-                    boardData = [['', '', ''], ['', '', ''], ['', '', '']];
-                    set(boardRef, boardData);
-                }
-
-                // Отображение игрового поля
+            // Инициализация игрового поля
+            boardRef.on('value', (snapshot) => {
+                const boardData = snapshot.val() || [['', '', ''], ['', '', ''], ['', '', '']];
                 boardData.forEach((row, rowIndex) => {
                     row.forEach((cell, cellIndex) => {
                         document.getElementById(`cell-${rowIndex}-${cellIndex}`).textContent = cell;
@@ -47,57 +39,66 @@
                 });
             });
 
-            // Проверка чей сейчас ход
-            onValue(turnRef, (snapshot) => {
-                const turn = snapshot.val();
-                isMyTurn = (turn === currentPlayer); // Ход текущего игрока
+            // Получение текущего хода
+            turnRef.on('value', (snapshot) => {
+                const turn = snapshot.val() || 'X';
                 document.getElementById('turn-info').textContent = `Ход игрока: ${turn}`;
+                isMyTurn = (turn === currentPlayer);
+            });
+
+            // Устанавливаем текущего игрока
+            if (!currentPlayer) {
+                getCurrentPlayer(lobbyId);
+            }
+        }
+
+        // Функция получения игрока
+        function getCurrentPlayer(lobbyId) {
+            const playerRef = firebase.database().ref(`games/${lobbyId}/players`);
+            playerRef.once('value', (snapshot) => {
+                const players = snapshot.val() || {};
+                if (!players.X) {
+                    currentPlayer = 'X';
+                    playerRef.update({ X: true });
+                } else if (!players.O) {
+                    currentPlayer = 'O';
+                    playerRef.update({ O: true });
+                }
+                alert(`Вы играете за: ${currentPlayer}`);
             });
         }
 
-        function makeMove(row, col, lobbyId) {
+        // Функция обработки клика по ячейке
+        function handleClick(row, col) {
             if (!isMyTurn) {
                 alert('Это не ваш ход!');
                 return;
             }
 
-            const cellRef = ref(database, `games/${lobbyId}/board/${row}/${col}`);
-
-            // Проверяем, свободна ли клетка
-            onValue(cellRef, (snapshot) => {
+            const cellRef = firebase.database().ref(`games/${lobbyId}/board/${row}/${col}`);
+            cellRef.once('value').then((snapshot) => {
                 if (snapshot.val() === '') {
-                    update(cellRef, currentPlayer).then(() => {
-                        switchTurn(lobbyId); // Меняем ход
+                    cellRef.set(currentPlayer).then(() => {
+                        switchTurn(lobbyId);
                     });
+                } else {
+                    alert('Эта клетка уже занята!');
                 }
-            }, { onlyOnce: true });
+            });
         }
 
+        // Функция смены хода
         function switchTurn(lobbyId) {
-            const turnRef = ref(database, `games/${lobbyId}/turn`);
-            const nextTurn = (currentPlayer === 'X') ? 'O' : 'X';
-            update(turnRef, nextTurn);
+            const turnRef = firebase.database().ref(`games/${lobbyId}/turn`);
+            turnRef.once('value').then((snapshot) => {
+                const currentTurn = snapshot.val();
+                const nextTurn = (currentTurn === 'X') ? 'O' : 'X';
+                turnRef.set(nextTurn);
+            });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
-            const username = localStorage.getItem('username');
-            const player = username === 'host' ? 'X' : 'O'; // Определение игрока
-            currentPlayer = player;
-
-            if (lobbyId) {
-                initGame(lobbyId);
-
-                document.querySelectorAll('.cell').forEach(cell => {
-                    cell.addEventListener('click', (e) => {
-                        const [row, col] = e.target.id.split('-').slice(1);
-                        makeMove(row, col, lobbyId);
-                    });
-                });
-            } else {
-                alert('ID лобби не найдено.');
-            }
-        });
+        // Инициализация игры
+        initGame(lobbyId);
     </script>
     <style>
         body {
