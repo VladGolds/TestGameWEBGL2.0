@@ -29,9 +29,17 @@
             const boardRef = ref(database, `games/${lobbyId}/board`);
             const turnRef = ref(database, `games/${lobbyId}/turn`);
 
-            // Отображение игрового поля
+            // Инициализация игрового поля, если оно не существует
             onValue(boardRef, (snapshot) => {
-                const boardData = snapshot.val();
+                let boardData = snapshot.val();
+
+                // Если игровое поле пустое (null), инициализируем его пустыми значениями
+                if (!boardData) {
+                    boardData = [['', '', ''], ['', '', ''], ['', '', '']];
+                    set(boardRef, boardData);
+                }
+
+                // Отображение игрового поля
                 boardData.forEach((row, rowIndex) => {
                     row.forEach((cell, cellIndex) => {
                         document.getElementById(`cell-${rowIndex}-${cellIndex}`).textContent = cell;
