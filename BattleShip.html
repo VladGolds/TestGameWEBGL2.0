@@ -6,111 +6,198 @@
     <title>Морской бой</title>
     <link rel="stylesheet" href="style.css">
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-        import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref, onValue, update, set, get } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAZqT98d7V8gpCeNma7Aos3u7ol5_wOug4",
-            authDomain: "games-63197.firebaseapp.com",
-            databaseURL: "https://games-63197-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "games-63197",
-            storageBucket: "games-63197.appspot.com",
-            messagingSenderId: "217470228668",
-            appId: "1:217470228668:web:30844724050d278a7358b9"
-        };
+    const firebaseConfig = {
+        apiKey: "YOUR_FIREBASE_API_KEY",
+        authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
+        databaseURL: "YOUR_FIREBASE_DATABASE_URL",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
 
-        let lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
-        let currentUser = localStorage.getItem('username') || 'player1'; // временно используем player1
-        let isGameOver = false;
-        let shipsPlaced = false;
+    let currentPlayer = null;
+    let isMyTurn = false;
 
-        // Функция генерации пустого поля
-        function generateBoard() {
-            const board = [];
-            for (let i = 0; i < 10; i++) {
-                const row = [];
-                for (let j = 0; j < 10; j++) {
-                    row.push(0); // 0 - пустое место, 1 - корабль
-                }
-                board.push(row);
-            }
-            return board;
-        }
+    const lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
 
-        // Генерируем поле для игрока
-        function createBoardUI(boardElement) {
-            for (let i = 0; i < 10; i++) {
-                for (let j = 0; j < 10; j++) {
-                    const cell = document.createElement('div');
-                    cell.classList.add('cell');
-                    cell.dataset.x = i;
-                    cell.dataset.y = j;
-                    cell.addEventListener('click', () => placeShip(i, j));
-                    boardElement.appendChild(cell);
-                }
-            }
-        }
+    function initGame(lobbyId) {
+        const boardRef = ref(database, `games/${lobbyId}/board`);
+        const turnRef = ref(database, `games/${lobbyId}/turn`);
 
-        // Функция для расстановки кораблей
-        function placeShip(x, y) {
-            if (shipsPlaced) return; // нельзя расставлять корабли после начала игры
+        // Инициализация доски для морского боя
+        onValue(boardRef, (snapshot) => {
+            const boardData = snapshot.val() || Array.from({ length: 10 }, () => Array(10).fill(''));
+            boardData.forEach((row, rowIndex) => {
+                row.forEach((cell, cellIndex) => {
+                    const cellElement = document.getElementById(`cell-${rowIndex}-${cellIndex}`);
+                    cellElement.textContent = cell;
 
-            const cell = document.querySelector(`[data-x='${x}'][data-y='${y}']`);
-            cell.classList.add('ship'); // визуально отмечаем корабль
-            // Логика добавления корабля на сервер
-            const playerBoardRef = ref(database, `games/${lobbyId}/${currentUser}/board`);
-            onValue(playerBoardRef, (snapshot) => {
-                const board = snapshot.val() || generateBoard();
-                board[x][y] = 1;
-                update(ref(database, `games/${lobbyId}/${currentUser}`), { board });
-            });
-        }
+                    // Сброс старых классов
+                    cellElement.classList.remove('hit', 'miss', 'ship');
 
-        // Функция старта игры
-        function startGame() {
-            shipsPlaced = true; // запрещаем дальнейшую расстановку
-            alert("Игра началась!");
-            update(ref(database, `games/${lobbyId}/${currentUser}`), { turn: currentUser === 'player1' });
-        }
-
-        // Загрузка игрового состояния
-        function loadGame() {
-            const gameRef = ref(database, 'games/' + lobbyId);
-            onValue(gameRef, (snapshot) => {
-                const gameData = snapshot.val();
-                if (gameData) {
-                    if (gameData.gameOver) {
-                        alert(`Игра окончена! Победитель: ${gameData.winner}`);
-                        isGameOver = true;
+                    // Добавление классов в зависимости от состояния клетки
+                    if (cell === 'X') {
+                        cellElement.classList.add('hit');
+                    } else if (cell === 'O') {
+                        cellElement.classList.add('miss');
+                    } else if (cell === 'S') {
+                        cellElement.classList.add('ship');
                     }
-                    // Обновляем доску в UI
-                    updateBoard(gameData);
-                }
+                });
             });
-        }
-
-        // Обновление доски
-        function updateBoard(gameData) {
-            // Логика обновления отображения доски
-            // и отметки попаданий/промахов
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const playerBoardElement = document.getElementById('player-board');
-            createBoardUI(playerBoardElement); // Создаем UI доски
-
-            document.getElementById('start-game-btn').addEventListener('click', startGame);
-
-            loadGame(); // Загружаем данные игры при загрузке страницы
         });
+
+        // Отслеживание хода
+        onValue(turnRef, (snapshot) => {
+            const turn = snapshot.val() || 'X';
+            document.getElementById('turn-info').textContent = `Ход игрока: ${turn}`;
+            isMyTurn = (turn === currentPlayer);
+        });
+
+        if (!currentPlayer) {
+            getCurrentPlayer(lobbyId); 
+        }
+    }
+
+    function getCurrentPlayer(lobbyId) {
+        const playerRef = ref(database, `games/${lobbyId}/players`);
+        get(playerRef).then((snapshot) => {
+            const players = snapshot.val() || {};
+
+            if (!players.X) {
+                currentPlayer = 'X';
+                update(playerRef, { X: true });
+            } else if (!players.O) {
+                currentPlayer = 'O';
+                update(playerRef, { O: true });
+            } else {
+                alert('Игра уже заполнена двумя игроками!');
+                return;
+            }
+
+            alert(`Вы играете за: ${currentPlayer}`);
+
+            const turnRef = ref(database, `games/${lobbyId}/turn`);
+            get(turnRef).then((snapshot) => {
+                let turn = snapshot.val();
+                if (!turn) {
+                    turn = 'X';
+                    set(turnRef, 'X');
+                }
+
+                isMyTurn = (turn === currentPlayer);
+            });
+        });
+    }
+
+    function switchTurn(lobbyId) {
+        const turnRef = ref(database, `games/${lobbyId}/turn`);
+
+        get(turnRef).then((snapshot) => {
+            const currentTurn = snapshot.val();
+            const nextTurn = (currentTurn === 'X') ? 'O' : 'X';
+
+            set(turnRef, nextTurn).then(() => {
+                console.log(`Теперь ход игрока: ${nextTurn}`);
+            });
+        });
+    }
+
+    window.handleClick = function (row, col) {
+        if (!isMyTurn) {
+            alert('Это не ваш ход!');
+            return;
+        }
+
+        const cellRef = ref(database, `games/${lobbyId}/board/${row}/${col}`);
+        
+        get(cellRef).then((snapshot) => {
+            const cellValue = snapshot.val();
+
+            if (cellValue === '') {
+                set(cellRef, 'X')
+                    .then(() => {
+                        switchTurn(lobbyId);
+                    });
+            } else {
+                alert('Эта клетка уже использована!');
+            }
+        });
+    };
+
+    initGame(lobbyId);
     </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(10, 50px);
+            grid-template-rows: repeat(10, 50px);
+            gap: 5px;
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .hit {
+            background-color: red;
+        }
+
+        .miss {
+            background-color: blue;
+        }
+
+        .ship {
+            background-color: gray;
+        }
+
+        #turn-info {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
 </head>
 <body>
     <h1>Морской бой</h1>
-    <div id="player-board" class="board"></div>
-    <button id="start-game-btn">Начать игру</button>
+    <div id="board">
+        <!-- Динамически создаваемые клетки поля 10x10 -->
+        <script>
+            for (let row = 0; row < 10; row++) {
+                for (let col = 0; col < 10; col++) {
+                    document.write(`<div id="cell-${row}-${col}" class="cell" onclick="handleClick(${row}, ${col})"></div>`);
+                }
+            }
+        </script>
+    </div>
+    <p id="turn-info">Ход игрока: X</p>
 </body>
 </html>
