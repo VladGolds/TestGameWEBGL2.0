@@ -64,7 +64,7 @@
 
                 // Если игра началась, перенаправляем всех игроков на страницу игры
                 if (lobbyData.gameStarted) {
-                    window.location.href = 'Tic-Tac-Toe.html?lobbyId=' + lobbyId;
+                    window.location.href = 'chess.html?lobbyId=' + lobbyId;
                 }
             });
         }
@@ -87,7 +87,7 @@
         }
 
         function startGame(lobbyId) {
-            const gameUrl = 'Tic-Tac-Toe.html'; // Замена на URL игры
+            const gameUrl = 'chess.html'; // Замена на URL игры
             // Обновляем статус лобби в Firebase
             update(ref(database, 'lobbies/' + lobbyId), {
                 gameStarted: true

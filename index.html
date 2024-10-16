@@ -44,7 +44,7 @@
                 alert(`Лобби создано! ID: ${lobbyId}`);
                 // Сохранение ID лобби в localStorage и переход на страницу лобби
                 localStorage.setItem('lobbyId', lobbyId);
-                window.location.href = `lobbyMafia.html?lobbyId=${lobbyId}`;
+                window.location.href = `lobby.html?lobbyId=${lobbyId}`;
             });
         }
 
@@ -67,7 +67,7 @@
                     }).then(() => {
                         alert('Вы присоединились к лобби!');
                         localStorage.setItem('lobbyId', lobbyId);
-                        window.location.href = `lobbyMafia.html?lobbyId=${lobbyId}`;
+                        window.location.href = `lobby.html?lobbyId=${lobbyId}`;
                     });
                 } else {
                     alert('Лобби с таким ID не найдено.');

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Шахматы</title>
+    <link rel="stylesheet" href="https://unpkg.com/chessboardjs@1.0.0/chessboard-1.0.0.min.css">
+    <style>
+        #board { width: 400px; margin: 20px auto; }
+    </style>
+    <script src="https://unpkg.com/chessboardjs@1.0.0/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+        import { getDatabase, ref, update, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZqT98d7V8gpCeNma7Aos3u7ol5_wOug4",
+            authDomain: "games-63197.firebaseapp.com",
+            databaseURL: "https://games-63197-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "games-63197",
+            storageBucket: "games-63197.appspot.com",
+            messagingSenderId: "217470228668",
+            appId: "1:217470228668:web:30844724050d278a7358b9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
+        const chess = new Chess();
+        let board = null;
+
+        function onDragStart(source, piece) {
+            // Разрешаем двигать фигуры только правильным игрокам
+            if (chess.game_over() || 
+                (chess.turn() === 'w' && piece.search(/^b/) !== -1) ||
+                (chess.turn() === 'b' && piece.search(/^w/) !== -1)) {
+                return false;
+            }
+        }
+
+        function onDrop(source, target) {
+            const move = chess.move({
+                from: source,
+                to: target,
+                promotion: 'q' // Всегда превращать пешку в ферзя
+            });
+
+            if (move === null) return 'snapback';
+
+            // Сохраняем ход в Firebase
+            update(ref(database, 'lobbies/' + lobbyId), {
+                boardState: chess.fen() // Сохраняем текущее состояние доски
+            });
+        }
+
+        function loadGameState() {
+            const gameRef = ref(database, 'lobbies/' + lobbyId + '/boardState');
+            
+            onValue(gameRef, (snapshot) => {
+                const boardState = snapshot.val();
+                if (boardState) {
+                    chess.load(boardState);
+                    board.position(chess.fen()); // Обновляем доску
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            board = Chessboard('board', {
+                draggable: true,
+                position: 'start',
+                onDragStart: onDragStart,
+                onDrop: onDrop
+            });
+
+            loadGameState(); // Загрузить текущее состояние игры при старте
+        });
+    </script>
+</head>
+<body>
+    <h1>Шахматы</h1>
+    <div id="board"></div>
+</body>
+</html>
