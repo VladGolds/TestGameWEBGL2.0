@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Морской бой</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+        import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZqT98d7V8gpCeNma7Aos3u7ol5_wOug4",
+            authDomain: "games-63197.firebaseapp.com",
+            databaseURL: "https://games-63197-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "games-63197",
+            storageBucket: "games-63197.appspot.com",
+            messagingSenderId: "217470228668",
+            appId: "1:217470228668:web:30844724050d278a7358b9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        let lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
+        let currentUser = localStorage.getItem('username') || 'player1'; // временно используем player1
+        let isGameOver = false;
+        let shipsPlaced = false;
+
+        // Функция генерации пустого поля
+        function generateBoard() {
+            const board = [];
+            for (let i = 0; i < 10; i++) {
+                const row = [];
+                for (let j = 0; j < 10; j++) {
+                    row.push(0); // 0 - пустое место, 1 - корабль
+                }
+                board.push(row);
+            }
+            return board;
+        }
+
+        // Генерируем поле для игрока
+        function createBoardUI(boardElement) {
+            for (let i = 0; i < 10; i++) {
+                for (let j = 0; j < 10; j++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.x = i;
+                    cell.dataset.y = j;
+                    cell.addEventListener('click', () => placeShip(i, j));
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+
+        // Функция для расстановки кораблей
+        function placeShip(x, y) {
+            if (shipsPlaced) return; // нельзя расставлять корабли после начала игры
+
+            const cell = document.querySelector(`[data-x='${x}'][data-y='${y}']`);
+            cell.classList.add('ship'); // визуально отмечаем корабль
+            // Логика добавления корабля на сервер
+            const playerBoardRef = ref(database, `games/${lobbyId}/${currentUser}/board`);
+            onValue(playerBoardRef, (snapshot) => {
+                const board = snapshot.val() || generateBoard();
+                board[x][y] = 1;
+                update(ref(database, `games/${lobbyId}/${currentUser}`), { board });
+            });
+        }
+
+        // Функция старта игры
+        function startGame() {
+            shipsPlaced = true; // запрещаем дальнейшую расстановку
+            alert("Игра началась!");
+            update(ref(database, `games/${lobbyId}/${currentUser}`), { turn: currentUser === 'player1' });
+        }
+
+        // Загрузка игрового состояния
+        function loadGame() {
+            const gameRef = ref(database, 'games/' + lobbyId);
+            onValue(gameRef, (snapshot) => {
+                const gameData = snapshot.val();
+                if (gameData) {
+                    if (gameData.gameOver) {
+                        alert(`Игра окончена! Победитель: ${gameData.winner}`);
+                        isGameOver = true;
+                    }
+                    // Обновляем доску в UI
+                    updateBoard(gameData);
+                }
+            });
+        }
+
+        // Обновление доски
+        function updateBoard(gameData) {
+            // Логика обновления отображения доски
+            // и отметки попаданий/промахов
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const playerBoardElement = document.getElementById('player-board');
+            createBoardUI(playerBoardElement); // Создаем UI доски
+
+            document.getElementById('start-game-btn').addEventListener('click', startGame);
+
+            loadGame(); // Загружаем данные игры при загрузке страницы
+        });
+    </script>
+</head>
+<body>
+    <h1>Морской бой</h1>
+    <div id="player-board" class="board"></div>
+    <button id="start-game-btn">Начать игру</button>
+</body>
+</html>

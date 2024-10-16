@@ -75,6 +75,71 @@ body {
     display: block;
 }
 
+/* Основной контент */
+.container {
+    padding: 20px;
+}
+
+.movies-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.movie-card {
+    background-color: #333;
+    padding: 10px;
+    width: 300px;
+    text-align: center;
+    transition: transform 0.3s ease; /* Анимация */
+}
+
+.movie-card img {
+    max-width: 100%;
+    border-radius: 5px;
+}
+
+.movie-card h3 {
+    margin: 10px 0 0;
+    font-size: 16px;
+    color: #fff;
+}
+.movie-card a {
+    text-decoration: none;
+}
+
+
+.movie-card:hover {
+    transform: scale(1.1); /* Увеличение карточки при наведении */
+}
+
+#createLobbyButton,
+#joinLobbyButton {
+    background-color: red;
+    color: white;
+    border: none;
+    margin-top: 20px;
+    border-radius: 10px;
+    padding: 5px 10px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+#createLobbyButton:hover,
+#joinLobbyButton:hover {
+    background-color: darkred;
+}
+
+#lobbyIdInput {
+    border: 2px solid red;
+    border-radius: 10px;
+    padding: 5px 10px;
+    font-size: 14px;
+    width: 120px;
+    margin-top: 20px;
+}
+
 header {
     background-color: #333;
     padding: 20px;

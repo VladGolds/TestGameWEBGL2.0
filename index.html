@@ -147,10 +147,25 @@
         <h1>Test</h1>
     </header>
 
-    <h1>Создание или присоединение к лобби</h1>
-    <button id="createLobbyButton">Создать лобби</button>
-    <input type="text" id="lobbyIdInput" placeholder="Введите ID лобби">
-    <button id="joinLobbyButton">Присоединиться к лобби</button>
+    <!-- Основной контент -->
+    <div class="container">
+        <div class="movies-grid" id="movies-grid">
+            <div class="movie-card">
+                <img src="tic-tac-toe.png" alt="Крестики нолики">
+                <h3>Крестики нолиик</h3>
+                <button id="createLobbyButton">Создать лобби</button>
+                <button id="joinLobbyButton">Присоединиться</button>
+                <input type="text" id="lobbyIdInput" placeholder="Введите ID лобби">
+            </div>
+            <!-- Добавить больше фильмов -->
+            <div class="movie-card">
+                <a href="description.html">
+                    <img src="poster1.jpg" alt="Новобранец">
+                    <h3>Пехотинец Серия 20344</h3>
+                </a>
+            </div>
+        </div>
+    </div>
 
     <!-- Кнопка для перехода на admin.html -->
     <div class="admin-button">
