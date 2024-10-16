@@ -4,12 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Шахматы</title>
-    <link rel="stylesheet" href="https://unpkg.com/chessboardjs@1.0.0/chessboard-1.0.0.min.css">
+    <!-- Подключаем локальный CSS -->
+    <link rel="stylesheet" href="libs/chessboard-1.0.0.min.css">
     <style>
         #board { width: 400px; margin: 20px auto; }
     </style>
-    <script src="https://unpkg.com/chessboardjs@1.0.0/chessboard-1.0.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <!-- Подключаем локальные JavaScript библиотеки -->
+    <script src="libs/chessboard-1.0.0.min.js"></script>
+    <script src="libs/chess.min.js"></script>
+</head>
+<body>
+    <h1>Шахматы</h1>
+    <div id="board"></div>
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
         import { getDatabase, ref, update, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
@@ -67,19 +74,20 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            board = Chessboard('board', {
-                draggable: true,
-                position: 'start',
-                onDragStart: onDragStart,
-                onDrop: onDrop
-            });
+            // Проверяем, доступна ли ChessboardJS
+            if (typeof Chessboard !== "undefined") {
+                board = Chessboard('board', {  // Используем ChessboardJS
+                    draggable: true,
+                    position: 'start',
+                    onDragStart: onDragStart,
+                    onDrop: onDrop
+                });
 
-            loadGameState(); // Загрузить текущее состояние игры при старте
+                loadGameState(); // Загрузить текущее состояние игры при старте
+            } else {
+                console.error("ChessboardJS не загружен");
+            }
         });
     </script>
-</head>
-<body>
-    <h1>Шахматы</h1>
-    <div id="board"></div>
 </body>
 </html>
