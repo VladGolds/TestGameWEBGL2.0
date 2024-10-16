@@ -44,30 +44,7 @@
                 alert(`Лобби создано! ID: ${lobbyId}`);
                 // Сохранение ID лобби в localStorage и переход на страницу лобби
                 localStorage.setItem('lobbyId', lobbyId);
-                window.location.href = `lobby.html?lobbyId=${lobbyId}`;
-            });
-        }
-
-        // Функция создания лобби
-        function createLobbyBattleShip() {
-            const lobbyId = generateLobbyId(); // Генерация уникального ID лобби
-            const username = localStorage.getItem('username'); // Получение имени пользователя из localStorage
-
-            const lobbyRef = ref(database, 'lobbies/' + lobbyId);
-
-            // Сохранение данных лобби в Firebase
-            set(lobbyRef, {
-                host: username,
-                players: {
-                    [username]: {
-                        ready: false
-                    }
-                }
-            }).then(() => {
-                alert(`Лобби создано! ID: ${lobbyId}`);
-                // Сохранение ID лобби в localStorage и переход на страницу лобби
-                localStorage.setItem('lobbyId', lobbyId);
-                window.location.href = `lobbyBattleShip.html?lobbyId=${lobbyId}`;
+                window.location.href = `LobbyBattleShip.html?lobbyId=${lobbyId}`;
             });
         }
 
@@ -90,29 +67,7 @@
                     }).then(() => {
                         alert('Вы присоединились к лобби!');
                         localStorage.setItem('lobbyId', lobbyId);
-                        window.location.href = `lobby.html?lobbyId=${lobbyId}`;
-                    });
-                } else {
-                    alert('Лобби с таким ID не найдено.');
-                }
-            });
-        }
-
-        // Функция для присоединения к лобби
-        function joinLobbyBattleShip(lobbyId) {
-            const username = localStorage.getItem('username'); // Получение имени пользователя из localStorage
-            const lobbyRef = ref(database, 'lobbies/' + lobbyId);
-
-            // Получение данных лобби из Firebase
-            get(lobbyRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    // Добавление игрока в лобби
-                    set(ref(database, `lobbies/${lobbyId}/players/${username}`), {
-                        ready: false
-                    }).then(() => {
-                        alert('Вы присоединились к лобби!');
-                        localStorage.setItem('lobbyId', lobbyId);
-                        window.location.href = `lobbyBattleShip.html?lobbyId=${lobbyId}`;
+                        window.location.href = `LobbyBattleShip.html?lobbyId=${lobbyId}`;
                     });
                 } else {
                     alert('Лобби с таким ID не найдено.');
@@ -169,18 +124,11 @@
 
         // Привязываем обработчики событий к кнопкам
         const createLobbyButton = document.getElementById('createLobbyButton');
-        const createLobbyBattleShipButton = document.getElementById('createLobbyBattleShipButton');
         const joinLobbyButton = document.getElementById('joinLobbyButton');
-        const joinLobbyButton = document.getElementById('joinLobbyBattleShipButton');
 
         createLobbyButton?.addEventListener('click', createLobby);
-        createLobbyBattleShipButton?.addEventListener('click', createLobbyBattleShip);
         joinLobbyButton?.addEventListener('click', () => {
             const lobbyId = document.getElementById('lobbyIdInput').value;
-            joinLobby(lobbyId);
-        });
-        joinLobbyBattleShipButton?.addEventListener('click', () => {
-            const lobbyId = document.getElementById('lobbyIdInputBattleShip').value;
             joinLobby(lobbyId);
         });
     </script>
@@ -213,9 +161,9 @@
             <div class="movie-card">
                 <img src="poster1.jpg" alt="Новобранец">
                 <h3>Пехотинец Серия 20344</h3>
-                <button id="createLobbyBattleShipButton">Создать лобби</button>
-                <button id="joinLobbyBattleShipButton">Присоединиться</button>
-                <input type="text" id="lobbyIdInputBattleShip" placeholder="Введите ID лобби">
+                <button id="createLobbyButton">Создать лобби</button>
+                <button id="joinLobbyButton">Присоединиться</button>
+                <input type="text" id="lobbyIdInput" placeholder="Введите ID лобби">
             </div>
         </div>
     </div>
