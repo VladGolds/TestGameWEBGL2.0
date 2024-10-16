@@ -4,200 +4,210 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Морской бой</title>
-    <link rel="stylesheet" href="style.css">
-    <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getDatabase, ref, onValue, update, set, get } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-
-    const firebaseConfig = {
-        apiKey: "YOUR_FIREBASE_API_KEY",
-        authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
-        databaseURL: "YOUR_FIREBASE_DATABASE_URL",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_STORAGE_BUCKET",
-        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-        appId: "YOUR_APP_ID"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
-
-    let currentPlayer = null;
-    let isMyTurn = false;
-
-    const lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
-
-    function initGame(lobbyId) {
-        const boardRef = ref(database, `games/${lobbyId}/board`);
-        const turnRef = ref(database, `games/${lobbyId}/turn`);
-
-        // Инициализация доски для морского боя
-        onValue(boardRef, (snapshot) => {
-            const boardData = snapshot.val() || Array.from({ length: 10 }, () => Array(10).fill(''));
-            boardData.forEach((row, rowIndex) => {
-                row.forEach((cell, cellIndex) => {
-                    const cellElement = document.getElementById(`cell-${rowIndex}-${cellIndex}`);
-                    cellElement.textContent = cell;
-
-                    // Сброс старых классов
-                    cellElement.classList.remove('hit', 'miss', 'ship');
-
-                    // Добавление классов в зависимости от состояния клетки
-                    if (cell === 'X') {
-                        cellElement.classList.add('hit');
-                    } else if (cell === 'O') {
-                        cellElement.classList.add('miss');
-                    } else if (cell === 'S') {
-                        cellElement.classList.add('ship');
-                    }
-                });
-            });
-        });
-
-        // Отслеживание хода
-        onValue(turnRef, (snapshot) => {
-            const turn = snapshot.val() || 'X';
-            document.getElementById('turn-info').textContent = `Ход игрока: ${turn}`;
-            isMyTurn = (turn === currentPlayer);
-        });
-
-        if (!currentPlayer) {
-            getCurrentPlayer(lobbyId); 
-        }
-    }
-
-    function getCurrentPlayer(lobbyId) {
-        const playerRef = ref(database, `games/${lobbyId}/players`);
-        get(playerRef).then((snapshot) => {
-            const players = snapshot.val() || {};
-
-            if (!players.X) {
-                currentPlayer = 'X';
-                update(playerRef, { X: true });
-            } else if (!players.O) {
-                currentPlayer = 'O';
-                update(playerRef, { O: true });
-            } else {
-                alert('Игра уже заполнена двумя игроками!');
-                return;
-            }
-
-            alert(`Вы играете за: ${currentPlayer}`);
-
-            const turnRef = ref(database, `games/${lobbyId}/turn`);
-            get(turnRef).then((snapshot) => {
-                let turn = snapshot.val();
-                if (!turn) {
-                    turn = 'X';
-                    set(turnRef, 'X');
-                }
-
-                isMyTurn = (turn === currentPlayer);
-            });
-        });
-    }
-
-    function switchTurn(lobbyId) {
-        const turnRef = ref(database, `games/${lobbyId}/turn`);
-
-        get(turnRef).then((snapshot) => {
-            const currentTurn = snapshot.val();
-            const nextTurn = (currentTurn === 'X') ? 'O' : 'X';
-
-            set(turnRef, nextTurn).then(() => {
-                console.log(`Теперь ход игрока: ${nextTurn}`);
-            });
-        });
-    }
-
-    window.handleClick = function (row, col) {
-        if (!isMyTurn) {
-            alert('Это не ваш ход!');
-            return;
-        }
-
-        const cellRef = ref(database, `games/${lobbyId}/board/${row}/${col}`);
-        
-        get(cellRef).then((snapshot) => {
-            const cellValue = snapshot.val();
-
-            if (cellValue === '') {
-                set(cellRef, 'X')
-                    .then(() => {
-                        switchTurn(lobbyId);
-                    });
-            } else {
-                alert('Эта клетка уже использована!');
-            }
-        });
-    };
-
-    initGame(lobbyId);
-    </script>
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
+            align-items: center;
+            flex-direction: column;
             height: 100vh;
-            margin: 0;
         }
 
         h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
         }
 
-        #board {
-            display: grid;
-            grid-template-columns: repeat(10, 50px);
-            grid-template-rows: repeat(10, 50px);
-            gap: 5px;
-        }
-
-        .cell {
-            width: 50px;
-            height: 50px;
-            background-color: #f0f0f0;
+        .game-container {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            cursor: pointer;
+            justify-content: space-around;
+            width: 80%;
         }
 
-        .hit {
+        .grid {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(10, 40px);
+            grid-template-rows: repeat(10, 40px);
+            gap: 2px;
+        }
+
+        .board div {
+            width: 40px;
+            height: 40px;
+            background-color: #e0e0e0;
+            border: 1px solid #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .board div.ship {
+            background-color: #333;
+        }
+
+        .board div.hit {
             background-color: red;
         }
 
-        .miss {
+        .board div.miss {
             background-color: blue;
         }
 
         .ship {
-            background-color: gray;
+            display: flex;
+            margin-bottom: 10px;
         }
 
-        #turn-info {
-            margin-top: 20px;
-            font-size: 18px;
+        .ship div {
+            width: 40px;
+            height: 40px;
+            background-color: #333;
+            margin-right: 2px;
+            cursor: move;
+        }
+
+        .rotate-btn {
+            margin: 10px;
+            padding: 5px 10px;
+            background-color: #333;
+            color: white;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
     <h1>Морской бой</h1>
-    <div id="board">
-        <!-- Динамически создаваемые клетки поля 10x10 -->
-        <script>
-            for (let row = 0; row < 10; row++) {
-                for (let col = 0; col < 10; col++) {
-                    document.write(`<div id="cell-${row}-${col}" class="cell" onclick="handleClick(${row}, ${col})"></div>`);
+    <div class="game-container">
+        <div class="grid player-grid">
+            <h2>Ваше поле</h2>
+            <div id="playerBoard" class="board"></div>
+        </div>
+        <div class="grid enemy-grid">
+            <h2>Поле противника</h2>
+            <div id="enemyBoard" class="board"></div>
+        </div>
+    </div>
+
+    <div class="ships-container">
+        <h2>Корабли</h2>
+        <div class="ship" draggable="true" data-length="4" id="ship4">
+            <div></div><div></div><div></div><div></div>
+        </div>
+        <div class="ship" draggable="true" data-length="3" id="ship3-1">
+            <div></div><div></div><div></div>
+        </div>
+        <div class="ship" draggable="true" data-length="3" id="ship3-2">
+            <div></div><div></div><div></div>
+        </div>
+        <button class="rotate-btn" onclick="rotateShip()">Повернуть корабль</button>
+    </div>
+
+    <script>
+        const playerBoard = document.getElementById('playerBoard');
+        const enemyBoard = document.getElementById('enemyBoard');
+        let isHorizontal = true;
+
+        // Функция для создания игрового поля
+        function createBoard(boardElement) {
+            for (let i = 0; i < 100; i++) {
+                const cell = document.createElement('div');
+                cell.dataset.id = i;
+                boardElement.appendChild(cell);
+            }
+        }
+
+        // Создание полей для игрока и противника
+        createBoard(playerBoard);
+        createBoard(enemyBoard);
+
+        // Перетаскивание кораблей
+        const ships = document.querySelectorAll('.ship');
+        const cells = document.querySelectorAll('.board div');
+        let draggedShip;
+        let draggedShipLength;
+
+        ships.forEach(ship => {
+            ship.addEventListener('dragstart', dragStart);
+        });
+
+        cells.forEach(cell => {
+            cell.addEventListener('dragover', dragOver);
+            cell.addEventListener('drop', dragDrop);
+        });
+
+        function dragStart(e) {
+            draggedShip = e.target;
+            draggedShipLength = draggedShip.querySelectorAll('div').length;
+        }
+
+        function dragOver(e) {
+            e.preventDefault();
+        }
+
+        function dragDrop(e) {
+            const start = parseInt(e.target.dataset.id);
+            const isAvailable = checkPlacement(start, draggedShipLength, isHorizontal);
+
+            if (isAvailable) {
+                for (let i = 0; i < draggedShipLength; i++) {
+                    let cell;
+                    if (isHorizontal) {
+                        cell = playerBoard.querySelector(`div[data-id="${start + i}"]`);
+                    } else {
+                        cell = playerBoard.querySelector(`div[data-id="${start + i * 10}"]`);
+                    }
+                    cell.classList.add('ship');
+                }
+                draggedShip.remove(); // Удаляем корабль после размещения
+            }
+        }
+
+        // Проверка, можно ли разместить корабль
+        function checkPlacement(start, length, horizontal) {
+            let valid = true;
+            for (let i = 0; i < length; i++) {
+                let cell;
+                if (horizontal) {
+                    cell = playerBoard.querySelector(`div[data-id="${start + i}"]`);
+                    if (!cell || cell.classList.contains('ship')) {
+                        valid = false;
+                        break;
+                    }
+                } else {
+                    cell = playerBoard.querySelector(`div[data-id="${start + i * 10}"]`);
+                    if (!cell || cell.classList.contains('ship')) {
+                        valid = false;
+                        break;
+                    }
                 }
             }
-        </script>
-    </div>
-    <p id="turn-info">Ход игрока: X</p>
+            return valid;
+        }
+
+        // Функция для поворота корабля
+        function rotateShip() {
+            isHorizontal = !isHorizontal;
+            ships.forEach(ship => {
+                if (isHorizontal) {
+                    ship.style.flexDirection = 'row';
+                } else {
+                    ship.style.flexDirection = 'column';
+                }
+            });
+        }
+    </script>
 </body>
 </html>

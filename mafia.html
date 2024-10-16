@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мафия</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZqT98d7V8gpCeNma7Aos3u7ol5_wOug4",
+            authDomain: "games-63197.firebaseapp.com",
+            databaseURL: "https://games-63197-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "games-63197",
+            storageBucket: "games-63197.appspot.com",
+            messagingSenderId: "217470228668",
+            appId: "1:217470228668:web:30844724050d278a7358b9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        function displayRole(lobbyId) {
+            const username = localStorage.getItem('username');
+            const playerRef = ref(database, `lobbies/${lobbyId}/players/${username}`);
+
+            onValue(playerRef, (snapshot) => {
+                const role = snapshot.val().role;
+                document.getElementById('role-display').textContent = `Ваша роль: ${role}`;
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
+            if (lobbyId) {
+                displayRole(lobbyId);
+            } else {
+                alert('ID лобби не найдено.');
+            }
+        });
+    </script>
+</head>
+<body>
+    <div id="role-display" class="role-display"></div>
+</body>
+</html>

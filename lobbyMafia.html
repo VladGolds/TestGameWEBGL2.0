@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лобби</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+        import { getDatabase, ref, onValue, set, get, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZqT98d7V8gpCeNma7Aos3u7ol5_wOug4",
+            authDomain: "games-63197.firebaseapp.com",
+            databaseURL: "https://games-63197-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "games-63197",
+            storageBucket: "games-63197.appspot.com",
+            messagingSenderId: "217470228668",
+            appId: "1:217470228668:web:30844724050d278a7358b9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // Загружаем лобби и игроков
+        function loadLobby(lobbyId) {
+            const lobbyRef = ref(database, 'lobbies/' + lobbyId);
+
+            onValue(lobbyRef, (snapshot) => {
+                const lobbyData = snapshot.val();
+                const playerList = document.getElementById('player-list');
+                const startGameButton = document.getElementById('start-game-button');
+                const currentUsername = localStorage.getItem('username');
+
+                playerList.innerHTML = ''; // Очищаем список
+
+                let allReady = true;
+
+                Object.keys(lobbyData.players).forEach(player => {
+                    const playerElement = document.createElement('li');
+                    const isHost = player === lobbyData.host;
+                    const isReady = lobbyData.players[player].ready;
+                    playerElement.textContent = `${player} ${isHost ? '(Хост)' : ''} - ${isReady ? 'Готов' : 'Не готов'}`;
+                    playerList.appendChild(playerElement);
+
+                    if (!isReady) {
+                        allReady = false;
+                    }
+
+                    if (isHost && currentUsername === player) {
+                        startGameButton.style.display = 'block';
+                    }
+                });
+
+                startGameButton.disabled = !allReady;
+
+                if (lobbyData.gameStarted) {
+                    window.location.href = `mafia.html?lobbyId=${lobbyId}`;
+                }
+            });
+        }
+
+        // Смена статуса готовности
+        function toggleReadyStatus(lobbyId) {
+            const username = localStorage.getItem('username');
+            const playerRef = ref(database, `lobbies/${lobbyId}/players/${username}`);
+
+            get(playerRef).then((snapshot) => {
+                const isReady = snapshot.val().ready;
+                update(playerRef, { ready: !isReady });
+            });
+        }
+
+        // Запуск игры
+        function startGame(lobbyId) {
+            update(ref(database, 'lobbies/' + lobbyId), { gameStarted: true });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const lobbyId = new URLSearchParams(window.location.search).get('lobbyId');
+            if (lobbyId) {
+                loadLobby(lobbyId);
+                document.getElementById('lobby-id').textContent = `ID лобби: ${lobbyId}`;
+
+                document.getElementById('ready-button').addEventListener('click', () => {
+                    toggleReadyStatus(lobbyId);
+                });
+
+                document.getElementById('start-game-button').addEventListener('click', () => {
+                    startGame(lobbyId);
+                });
+            } else {
+                alert('ID лобби не найдено.');
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Лобби</h1>
+        <p id="lobby-id"></p>
+        <ul id="player-list"></ul>
+        <button id="ready-button">Готов / Не готов</button>
+        <button id="start-game-button" style="display:none;" disabled>Начать игру</button>
+    </div>
+</body>
+</html>
